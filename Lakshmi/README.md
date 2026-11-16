@@ -1,6 +1,6 @@
-# Practice Go: Day 1 and Day 2
+# Practice Go: Day 1 to Day 3
 
-My notes and practice programs from the first two days of learning Go.
+My notes and practice programs from the first three days of learning Go.
 
 ```
 practice-go/
@@ -12,6 +12,13 @@ practice-go/
 └── day2/
     ├── basics/main.go          if, switch, loops, functions, defer
     └── calculator/main.go      Day 2 goal: calculator
+└── day3/
+    ├── arrays/main.go          fixed-size lists
+    ├── slices/main.go          lists that can grow
+    ├── maps/main.go            key -> value pairs
+    ├── range/main.go           looping with range
+    ├── pointers/main.go        & and *
+    └── wordcounter/main.go     Day 3 goal: word-frequency counter
 ```
 
 ---
@@ -280,7 +287,263 @@ Every run ends with `Thank you for using the calculator`, printed by `defer`.
 
 ---
 
+## Day 3: Data Structures and Pointers
+
+### Arrays
+
+An array is a list with a **fixed size**. It can't grow or shrink.
+
+```go
+var scores [3]int                         // [0 0 0]
+scores[0] = 90                            // positions start at 0
+
+colors := [3]string{"red", "green", "blue"}
+fmt.Println(colors[1])                    // green
+fmt.Println(len(colors))                  // 3
+```
+
+Copying an array copies all its values, so changing the copy doesn't change the original:
+
+```go
+arr := [3]int{1, 2, 3}
+copyArr := arr
+copyArr[0] = 100
+// arr = [1 2 3], copyArr = [100 2 3]
+```
+
+Run it:
+
+```bash
+go run ./day3/arrays
+```
+
+### Slices
+
+A slice is a list that **can grow**. It looks like an array but has no size inside `[]`.
+
+```go
+fruits := []string{"apple"}
+fruits = append(fruits, "banana")          // add one item
+fruits = append(fruits, "mango", "grape")  // add several
+// [apple banana mango grape]
+```
+
+Always save the result of `append` back into the variable.
+
+**Taking part of a slice** with `[start:end]` includes `start` but not `end`:
+
+```go
+nums := []int{10, 20, 30, 40, 50}
+
+nums[1:4]   // [20 30 40]
+nums[:2]    // [10 20]
+nums[2:]    // [30 40 50]
+```
+
+A part of a slice **shares memory** with the original:
+
+```go
+part := nums[1:4]
+part[0] = 99
+// nums is now [10 99 30 40 50]
+```
+
+**len and cap:**
+- `len` is how many items are in the slice now.
+- `cap` is how many fit before Go has to make more room.
+
+**make** creates a slice with a length and a capacity:
+
+```go
+s := make([]int, 3, 5)   // [0 0 0], len 3, cap 5
+s = append(s, 7)         // [0 0 0 7], len 4, cap 5
+```
+
+| | Array | Slice |
+|---|---|---|
+| Written as | `[3]int{1, 2, 3}` | `[]int{1, 2, 3}` |
+| Size | Fixed | Can grow |
+| Used | Rarely | Almost always |
+
+Run it:
+
+```bash
+go run ./day3/slices
+```
+
+### Maps
+
+A map stores **key → value** pairs, like a dictionary.
+
+```go
+ages := map[string]int{
+    "Asha": 25,
+    "Ravi": 30,
+}
+
+ages["Mia"] = 22       // add
+ages["Asha"] = 26      // change
+delete(ages, "Ravi")   // remove
+len(ages)              // 2
+```
+
+Create an empty map with `{}`:
+
+```go
+counts := map[string]int{}
+```
+
+**Comma ok.** A missing key gives the zero value (`0` for int). To check whether the key really exists, ask for a second value:
+
+```go
+age, ok := ages["Tom"]
+// age = 0, ok = false → Tom is not in the map
+
+if age, ok := ages["Asha"]; ok {
+    fmt.Println("Asha is", age)
+}
+```
+
+The order of items in a map is **random**.
+
+Run it:
+
+```bash
+go run ./day3/maps
+```
+
+### Range
+
+`for ... range` loops over slices, maps and strings.
+
+```go
+fruits := []string{"apple", "banana", "mango"}
+
+for i, fruit := range fruits {   // index and value
+    fmt.Println(i, fruit)
+}
+
+for _, fruit := range fruits {   // _ skips the index
+    fmt.Println(fruit)
+}
+
+for name, age := range ages {    // map: key and value
+    fmt.Println(name, age)
+}
+
+for i, ch := range "Go!" {       // string: position and character
+    fmt.Println(i, string(ch))
+}
+```
+
+| Looping over | First value | Second value |
+|---|---|---|
+| slice | index | item |
+| map | key | value |
+| string | position | character |
+
+Run it:
+
+```bash
+go run ./day3/range
+```
+
+### Pointers
+
+A pointer holds the **address** of a variable, the place in memory where it's stored.
+
+| Symbol | Meaning | Example |
+|---|---|---|
+| `&` | get the address of a variable | `p := &x` |
+| `*` | use the value at that address | `*p = 20` |
+
+```go
+x := 10
+p := &x          // p holds the address of x
+fmt.Println(*p)  // 10
+*p = 20
+fmt.Println(x)   // 20, x changed through the pointer
+```
+
+**Why use pointers?** A function gets a **copy** of what you pass in. To let the function change your variable, pass its address:
+
+```go
+func double(n int) {
+    n = n * 2            // changes only the copy
+}
+
+func doublePtr(n *int) {
+    *n = *n * 2          // changes the original
+}
+
+y := 5
+double(y)       // y is still 5
+doublePtr(&y)   // y is now 10
+```
+
+This is why Day 1 used `fmt.Scan(&celsius)`. `Scan` needs the address so it can put the typed number into the variable.
+
+Run it:
+
+```bash
+go run ./day3/pointers
+```
+
+### Day 3 goal: word-frequency counter
+
+This program uses a slice, a map, range and comma ok together.
+
+```go
+text := "Go is fun. Go is fast, and Go is simple!"
+
+counts := map[string]int{}   // word -> how many times
+order := []string{}          // words in the order they appear
+
+for _, w := range strings.Fields(text) {
+    w = strings.Trim(w, ".,!?")   // remove punctuation
+    w = strings.ToLower(w)        // "Go" and "go" are the same
+
+    if _, seen := counts[w]; !seen {
+        order = append(order, w)
+    }
+
+    counts[w]++
+}
+
+for _, w := range order {
+    fmt.Println(w, counts[w])
+}
+```
+
+How it works:
+1. `strings.Fields` splits the text into a slice of words.
+2. `range` goes through each word.
+3. `Trim` removes punctuation and `ToLower` makes every word lower-case.
+4. `counts[w]++` adds 1. A new word starts at 0, so it becomes 1.
+5. The map's order is random, so the `order` slice keeps the words in the order they first appeared.
+
+Run it:
+
+```bash
+go run ./day3/wordcounter
+```
+
+Expected output:
+
+```
+go 3
+is 3
+fun 1
+fast 1
+and 1
+simple 1
+```
+
+---
+
 ## What I learned
+
+**Short note*
 
 1. Every Go program starts in `func main()` inside `package main`.
 2. `:=` is the short way to create a variable.
@@ -288,3 +551,8 @@ Every run ends with `Thank you for using the calculator`, printed by `defer`.
 4. `for` is the only loop in Go, and `switch` doesn't need `break`.
 5. A function can return more than one value. The calculator uses this to check for division by zero.
 6. `defer` runs a line when the function ends.
+7. Arrays have a fixed size. Slices can grow with `append`, and slices are what you use most.
+8. Part of a slice shares memory with the original slice.
+9. Maps store key → value pairs. Use comma ok to check whether a key exists.
+10. `range` is the easy way to loop over slices, maps and strings.
+11. `&` gets a variable's address and `*` uses the value at that address. Pass a pointer when a function needs to change your variable.
